@@ -1,8 +1,11 @@
 /**
  * Example: Convert text to speech and save as an MP3 file.
  *
- * Run:
+ * Usage:
  *   boxlang examples/audio-tts.bxs
+ *   boxlang examples/audio-tts.bxs examples/text_test.txt
+ *   boxlang examples/audio-tts.bxs examples/text_test.txt examples/my-audio.mp3
+ *   boxlang examples/audio-tts.bxs examples/my-audio.mp3
  */
 
 apiKey = getSystemSetting( "OPENAI_API_KEY", "" );
@@ -13,8 +16,49 @@ if( !len( apiKey ) ){
 	);
 }
 
+parsedArgs = cliGetArgs();
+inputText = "hello my name is cornelius";
+inputFilePath = "";
+outputPath = "";
+
+if( arrayLen( parsedArgs.positionals ) == 1 ){
+	candidatePath = createObject( "java", "java.io.File" ).init( parsedArgs.positionals[ 1 ] ).getCanonicalPath();
+	if( fileExists( candidatePath ) ){
+		inputFilePath = candidatePath;
+	} else {
+		outputPath = candidatePath;
+	}
+} else if( arrayLen( parsedArgs.positionals ) > 1 ){
+	inputFilePath = createObject( "java", "java.io.File" ).init( parsedArgs.positionals[ 1 ] ).getCanonicalPath();
+	outputPath = createObject( "java", "java.io.File" ).init( parsedArgs.positionals[ 2 ] ).getCanonicalPath();
+}
+
+if( len( inputFilePath ) ){
+	if( !fileExists( inputFilePath ) ){
+		throw(
+			type: "InvalidArgument",
+			message: "Input text file not found: #inputFilePath#"
+		);
+	}
+	inputText = trim( fileRead( inputFilePath ) );
+	if( !len( inputText ) ){
+		throw(
+			type: "InvalidArgument",
+			message: "Input text file is empty: #inputFilePath#"
+		);
+	}
+}
+
+if( !len( outputPath ) ){
+	if( len( inputFilePath ) ){
+		outputPath = reReplaceNoCase( inputFilePath, "\.[^.]+$", "" ) & ".mp3";
+	} else {
+		outputPath = expandPath( "./cornelius.mp3" );
+	}
+}
+
 audioBinary = aiSpeak(
-	input: "hello my name is cornelius",
+	input: inputText,
 	params: {
 		model: "tts-1",
 		voice: "alloy",
@@ -27,6 +71,5 @@ audioBinary = aiSpeak(
 	}
 );
 
-outputPath = expandPath( "./cornelius.mp3" );
-fileWriteBinary( outputPath, audioBinary );
+fileWrite( outputPath, audioBinary );
 println( "Wrote audio file: #outputPath#" );

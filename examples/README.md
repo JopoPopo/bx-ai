@@ -248,6 +248,12 @@ boxlang examples/pipelines/07-text-cleaner.bxs
 
 # Full transformer pipeline (NEW!)
 boxlang examples/pipelines/08-transformer-pipeline.bxs
+
+# Text-to-speech (OpenAI)
+boxlang examples/audio-tts.bxs
+
+# Speech-to-text (OpenAI)
+boxlang examples/audio-stt.bxs examples/cornelius.mp3
 ```
 
 ### Ollama (Local AI)
