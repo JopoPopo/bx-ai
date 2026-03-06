@@ -1,0 +1,79 @@
+/**
+ * Example: Convert speech audio (MP3/M4A/WAV) to readable text.
+ *
+ * Usage:
+ *   boxlang examples/audio-stt.bxs /absolute/or/relative/path/to/audio.mp3
+ *
+ * Example:
+ *   boxlang examples/audio-stt.bxs examples/cornelius.mp3
+ *   boxlang examples/audio-stt.bxs examples/cornelius.mp3 examples/cornelius.txt
+ */
+
+apiKey = getSystemSetting( "OPENAI_API_KEY", "" );
+if( !len( apiKey ) ){
+	throw(
+		type: "InvalidConfiguration",
+		message: "OPENAI_API_KEY is not set in your environment."
+	);
+}
+
+parsedArgs = cliGetArgs();
+if( !arrayLen( parsedArgs.positionals ) ){
+	throw(
+		type: "InvalidArgument",
+		message: "Please provide an audio file path. Example: boxlang examples/audio-stt.bxs examples/cornelius.mp3"
+	);
+}
+
+inputPath = parsedArgs.positionals[ 1 ];
+audioPath = inputPath;
+
+if( !fileExists( audioPath ) ){
+	audioPath = expandPath( inputPath );
+}
+
+if( !fileExists( audioPath ) ){
+	userDir = getSystemSetting( "user.dir", "" );
+	if( len( userDir ) ){
+		audioPath = userDir & "/" & inputPath;
+	}
+}
+
+if( !fileExists( audioPath ) ){
+	throw(
+		type: "InvalidArgument",
+		message: "Audio file not found: #audioPath#"
+	);
+}
+
+audioPath = createObject( "java", "java.io.File" ).init( audioPath ).getCanonicalPath();
+
+transcription = aiAudioToText(
+	filePath: audioPath,
+	params: {
+		model: "whisper-1"
+	},
+	options: {
+		provider: "openai",
+		apiKey: apiKey,
+		returnFormat: "single"
+	}
+);
+
+println( "" );
+println( "Transcription for: #audioPath#" );
+println( "----------------------------------------" );
+readableText = trim( transcription );
+println( readableText );
+
+outputPath = "";
+if( arrayLen( parsedArgs.positionals ) > 1 ){
+	outputPath = parsedArgs.positionals[ 2 ];
+} else {
+	outputPath = reReplaceNoCase( audioPath, "\.[^.]+$", "" ) & ".txt";
+}
+
+outputPath = createObject( "java", "java.io.File" ).init( outputPath ).getCanonicalPath();
+fileWrite( outputPath, readableText );
+println( "" );
+println( "Saved transcription to: #outputPath#" );

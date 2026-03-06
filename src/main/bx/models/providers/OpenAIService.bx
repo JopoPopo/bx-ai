@@ -153,12 +153,25 @@ class extends="BaseService"{
 			);
 		}
 
+		// Normalize status/body across runtime response shapes
+		var rawStatus = transcriptionResult.statusCode ?: transcriptionResult.status_code ?: "0";
+		var responseBody = "";
+		if( structKeyExists( transcriptionResult, "filecontent" ) ){
+			responseBody = transcriptionResult.filecontent;
+		} else if( structKeyExists( transcriptionResult, "fileContent" ) ){
+			responseBody = transcriptionResult.fileContent;
+		} else if( structKeyExists( transcriptionResult, "responseBody" ) ){
+			responseBody = transcriptionResult.responseBody;
+		} else if( structKeyExists( transcriptionResult, "errorDetail" ) ){
+			responseBody = transcriptionResult.errorDetail;
+		}
+
 		// Handle error status codes
-		var statusCode = val( listFirst( transcriptionResult.statusCode, " " ) );
+		var statusCode = val( listFirst( rawStatus, " " ) );
 		if( statusCode >= 400 ){
 			throw(
 				type: "ProviderError",
-				message: "OpenAI transcription failed with status #transcriptionResult.statusCode#: #transcriptionResult.filecontent#"
+				message: "OpenAI transcription failed with status #rawStatus#: #responseBody#"
 			);
 		}
 
@@ -166,10 +179,10 @@ class extends="BaseService"{
 		var transcriptionText = "";
 
 		try {
-			responsePayload = jsonDeserialize( transcriptionResult.filecontent );
+			responsePayload = jsonDeserialize( responseBody );
 			transcriptionText = responsePayload.text ?: "";
 		} catch( any e ){
-			transcriptionText = toString( transcriptionResult.filecontent ?: "" );
+			transcriptionText = toString( responseBody ?: "" );
 			responsePayload = { text: transcriptionText };
 		}
 
